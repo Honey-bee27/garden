@@ -52,6 +52,7 @@ body{font-family:'Jost',sans-serif;color:var(--text);-webkit-font-smoothing:anti
     linear-gradient(180deg,#6b4e34 0%,#4a3423 35%,#2c1e10 100%);
 }
 .soil.wet{filter:brightness(.6) saturate(1.2);}
+.garden.dry{filter:saturate(.5) brightness(.86) sepia(.1);transition:filter 2.5s ease;}
 .stem{transform-origin:bottom center;transform:scaleY(0);animation:growStem 1.15s cubic-bezier(.25,.85,.35,1.05) forwards;animation-delay:var(--d,0s);}
 @keyframes growStem{to{transform:scaleY(1);}}
 .bloom{transform-origin:center;transform:scale(0) rotate(-14deg);opacity:0;animation:bloomIn .9s cubic-bezier(.2,.9,.3,1.2) forwards;animation-delay:var(--bd,0s);}
@@ -136,7 +137,6 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:clamp(38px,9
   }
   requestAnimationFrame(tickWind);
   function gust(){
-    // a stronger passing gust every so often — bends garden, blades, clouds and embers together
     const strength=rand(0.6,1.4);
     gardenEl.style.transition='transform 1.1s cubic-bezier(.3,.6,.3,1)';
     gardenEl.style.transform=`skewX(${-1.6*strength}deg)`;
@@ -166,7 +166,6 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:clamp(38px,9
     document.getElementById('clock').firstChild.textContent=new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+' ';
   }
   updateClock(); setInterval(updateClock,10000);
-  document.getElementById('wx').textContent='32°C · Cloudy';
 
   // ---------- real-time sun / moon — Karaikudi, TN (10.07°N) late-Sept: sunrise ~6:03, sunset ~5:58pm ----------
   const SUNRISE=6.05, SUNSET=17.97;
@@ -193,7 +192,7 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:clamp(38px,9
     const y = 64 - Math.sin(prog*Math.PI)*48;
     sm.style.left=x+'%'; sm.style.top=y+'%';
     cor.style.left=x+'%'; cor.style.top=y+'%';
-    const low=Math.sin(prog*Math.PI); // near 0 at horizon → warmer, bigger, hazier
+    const low=Math.sin(prog*Math.PI);
     if(isDay){
       const warmth=1-Math.min(1,low*1.3);
       const size=46+ (1-low)*20;
@@ -215,7 +214,7 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:clamp(38px,9
 
   function buildStars(){
     const s=document.getElementById('stars'); s.innerHTML='';
-    const n=90;
+    const n=70;
     for(let i=0;i<n;i++){
       const d=document.createElement('div'); d.className='star';
       const sz=rand(1,2.2);
@@ -226,9 +225,51 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:clamp(38px,9
   }
   buildStars();
 
-  // ---------- live weather — Karaikudi, TN: ~32°C, cloudy, 10% rain chance today ----------
-  const WX={cloudDensity:5,rainChance:10,tempLabel:'32°C · Cloudy'};
-  document.getElementById('wx').textContent=WX.tempLabel;
+  // ---------- live weather via Open-Meteo (no key needed), geolocation with fallback ----------
+  const WMO_RAIN=new Set([51,53,55,56,57,61,63,65,66,67,80,81,82,95,96,99]);
+  const WMO_LABEL={0:'Clear',1:'Mostly clear',2:'Partly cloudy',3:'Cloudy',45:'Foggy',48:'Foggy',
+    51:'Light drizzle',53:'Drizzle',55:'Heavy drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',
+    71:'Light snow',73:'Snow',75:'Heavy snow',80:'Rain showers',81:'Rain showers',82:'Heavy showers',
+    95:'Thunderstorm',96:'Thunderstorm',99:'Thunderstorm'};
+  let WX={cloudDensity:4,rainChance:8,tempLabel:'',isRainingNow:false};
+  function applyWeatherToScene(){
+    document.getElementById('wx').textContent=WX.tempLabel;
+    buildClouds(WX.cloudDensity);
+    const rainWrap=document.getElementById('rainWrap'), soil=document.getElementById('soil'), stageEl=document.getElementById('stage');
+    rainWrap.style.opacity = WX.isRainingNow ? 1 : 0;
+    soil.classList.toggle('wet', WX.isRainingNow);
+    if(WX.isRainingNow) setLastWatered(Date.now());
+    applyDryness();
+    // dim/desaturate the whole scene under heavy overcast or storms, brighten on clear skies
+    let filter='none';
+    if(WX.isStormy) filter='brightness(.7) saturate(.85)';
+    else if(WX.cloudDensity>=6) filter='brightness(.85) saturate(.92)';
+    else if(WX.isFoggy) filter='brightness(.9) contrast(.85) saturate(.8)';
+    else if(WX.cloudDensity<=1) filter='brightness(1.06) saturate(1.08)';
+    stageEl.style.transition='filter 2s ease';
+    stageEl.style.filter=filter;
+  }
+  function fetchWeather(lat,lon){
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,cloud_cover,precipitation`)
+      .then(r=>r.json())
+      .then(d=>{
+        const c=d.current;
+        const code=c.weather_code;
+        WX.tempLabel=Math.round(c.temperature_2m)+'°C · '+(WMO_LABEL[code]||'—');
+        WX.cloudDensity=Math.max(1,Math.round((c.cloud_cover||0)/16));
+        WX.isRainingNow = WMO_RAIN.has(code) || c.precipitation>0;
+        WX.isStormy = (code===95||code===96||code===99);
+        WX.isFoggy = (code===45||code===48);
+        applyWeatherToScene();
+      })
+      .catch(()=>{ WX.tempLabel='Weather unavailable'; applyWeatherToScene(); });
+  }
+  function initWeather(){
+    // fixed location: Karaikudi, Tamil Nadu — no geolocation prompt
+    fetchWeather(10.07,78.78);
+  }
+  initWeather();
+
   function buildClouds(n){
     const c=document.getElementById('clouds'); c.innerHTML='';
     for(let i=0;i<n;i++){
@@ -240,7 +281,6 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:clamp(38px,9
       c.appendChild(el);
     }
   }
-  // clouds speed up slightly with the wind field, without restarting their animation
   setInterval(()=>{
     document.querySelectorAll('.cloud').forEach(el=>{
       const base=parseFloat(el.dataset.baseDur);
@@ -250,23 +290,16 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:clamp(38px,9
   },1400);
   function buildRainDrops(){
     const w=document.getElementById('rainWrap'); w.innerHTML='';
-    const n=Math.round(Math.max(window.innerWidth,360)/9);
+    const n=Math.round(Math.max(window.innerWidth,360)/14);
     for(let i=0;i<n;i++){
       const d=document.createElement('div'); d.className='rainL';
       d.style.left=rand(0,100)+'%'; d.style.animationDuration=rand(.5,.9)+'s'; d.style.animationDelay=rand(0,1)+'s';
       w.appendChild(d);
     }
   }
-  buildClouds(WX.cloudDensity); buildRainDrops();
-  function maybeShower(){
-    if(Math.random()*100 < WX.rainChance){
-      document.getElementById('rainWrap').style.opacity=1;
-      document.getElementById('soil').classList.add('wet');
-      const dur=rand(25000,55000);
-      setTimeout(()=>{ document.getElementById('rainWrap').style.opacity=0; },dur);
-    }
-  }
-  setInterval(maybeShower,100000);
+  buildRainDrops();
+  // re-check weather roughly every 20 min so a long-open tab stays current
+  setInterval(initWeather,1200000);
 
   // ---------- garden ----------
   function makeStem(height,colorLight){
@@ -364,9 +397,8 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:clamp(38px,9
     const growWrap=document.createElementNS(NS,"g");
     growWrap.setAttribute("transform",`scale(${initialScale||1})`);
     if(initialScale && initialScale<1){ growWrap.style.transformBox='fill-box'; growWrap.style.transformOrigin='50% 100%'; }
-    // windSway continuously reads the shared wind field instead of a fixed loop — every plant leans together, unevenly
     const windSway=document.createElementNS(NS,"g");
-    const respon=rand(0.75,1.35); // how strongly this plant answers the wind (taller/thinner = twitchier)
+    const respon=rand(0.75,1.35);
     const phase=rand(0,6.28);
     g._windTick=(t)=>{
       const ang=Math.sin(t*0.9+phase)*wind.speed*3.2*respon + Math.sin(t*2.3+phase)*wind.speed*1.1*respon;
@@ -405,36 +437,59 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:clamp(38px,9
     }
     return seq;
   }
-  let allPlants=[];
-  function buildGarden(counts){
-    gardenEl.innerHTML=""; allPlants=[];
+  let allPlants=[], plantEls={};
+  // ---------- persisted plants: survive refresh; new ones take 2 days to fully grow ----------
+  const STORE_KEY='garden_plants_v2', GROW_MS=2*24*60*60*1000;
+  const WATER_KEY='garden_last_watered_v1', DRY_MS=18*60*60*1000;
+  function loadPlants(){ try{return JSON.parse(localStorage.getItem(STORE_KEY));}catch(e){return null;} }
+  function savePlants(list){ try{localStorage.setItem(STORE_KEY,JSON.stringify(list));}catch(e){} }
+  function getLastWatered(){ try{return parseInt(localStorage.getItem(WATER_KEY))||0;}catch(e){return 0;} }
+  function setLastWatered(ts){ try{localStorage.setItem(WATER_KEY,String(ts));}catch(e){} }
+  function applyDryness(){
+    const dry=(Date.now()-getLastWatered())>DRY_MS;
+    document.getElementById('soil')?.classList.toggle('dry',dry);
+    gardenEl.classList.toggle('dry',dry);
+  }
+  let plantsData = loadPlants();
+  if(!plantsData || !plantsData.length){
+    const seq=buildOrder({tulip:3,lily:2,lotus:2,orchid:2,sun:3,white:2});
+    const w=Math.max(window.innerWidth,320), sp=w/seq.length;
+    plantsData = seq.map((type,i)=>({
+      id:'seed'+i, type,
+      x:Math.max(8,Math.min(w-8, sp*(i+0.5)+rand(-sp*.22,sp*.22))),
+      plantedAt: Date.now()-GROW_MS-1000
+    }));
+    savePlants(plantsData);
+  }
+  function buildGarden(list){
+    gardenEl.innerHTML=""; allPlants=[]; plantEls={};
     const soil=document.createElement('div'); soil.className='soil'; soil.id='soil'; gardenEl.appendChild(soil);
-    const items=buildOrder(counts);
-    svgW=Math.max(stage.clientWidth,320); const spacing=svgW/Math.max(items.length,1);
+    svgW=Math.max(stage.clientWidth,320);
     const bladeLayer=document.createElement('div');
     bladeLayer.style.cssText="position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:center;z-index:2;pointer-events:none;";
-    const bladeCount=Math.round(svgW/11);
+    const bladeCount=Math.round(svgW/22);
     for(let i=0;i<bladeCount;i++){
       const h=rand(30,110), d=1+Math.random()*1.6, tilt=rand(-6,6), mul=rand(0.6,1.4);
       const blade=document.createElement('div'); blade.className='blade';
       const base=`scaleY(1) rotate(${tilt}deg)`;
       blade.dataset.base=base; blade.dataset.mul=mul.toFixed(2);
-      blade.style.cssText=`width:6px;height:${h}px;margin:0 1px;background:linear-gradient(180deg,${Math.random()>.5?'#3d5a34':'#2a4126'},#182a17);border-radius:6px 6px 2px 2px;transform-origin:bottom center;transform:scaleY(0) rotate(${tilt}deg);animation:growStem ${d}s cubic-bezier(.25,.85,.35,1.05) forwards;animation-delay:${rand(0,1.1)}s;`;
+      blade.style.cssText=`width:6px;height:${h}px;margin:0 2px;background:linear-gradient(180deg,${Math.random()>.5?'#3d5a34':'#2a4126'},#182a17);border-radius:6px 6px 2px 2px;transform-origin:bottom center;transform:scaleY(0) rotate(${tilt}deg);animation:growStem ${d}s cubic-bezier(.25,.85,.35,1.05) forwards;animation-delay:${rand(0,1.1)}s;`;
       bladeLayer.appendChild(blade);
     }
     gardenEl.appendChild(bladeLayer);
     svg=document.createElementNS(NS,"svg"); svg.setAttribute("viewBox",`0 0 ${svgW} 260`);
     svg.setAttribute("width","100%"); svg.setAttribute("height","100%");
     svg.style.cssText="position:relative;z-index:3;overflow:visible;"; svg.setAttribute("preserveAspectRatio","none");
-    items.forEach((type,i)=>{
-      const x=spacing*(i+0.5)+rand(-spacing*.28,spacing*.28);
-      const delay=.15+(i/items.length)*1.3+rand(0,.15);
-      const p=makePlant(type,Math.max(8,Math.min(svgW-8,x)),delay);
-      svg.appendChild(p); allPlants.push(p);
+    list.forEach((rec,i)=>{
+      const frac=Math.min(1,(Date.now()-rec.plantedAt)/GROW_MS);
+      const p=makePlant(rec.type, Math.max(8,Math.min(svgW-8,rec.x)), i*0.04, 0.25+0.75*frac);
+      p.dataset.sid=rec.id; p.dataset.growing=frac<1?'1':'0';
+      p._growWrap.style.transition='transform 58s linear';
+      svg.appendChild(p); allPlants.push(p); plantEls[rec.id]=p;
     });
     gardenEl.appendChild(svg);
+    applyDryness();
   }
-  // one shared animation frame drives every plant's wind sway — cheap and perfectly synced to gust/lull
   let windT=0;
   function windLoop(){
     windT+=0.016;
@@ -444,7 +499,7 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:clamp(38px,9
   requestAnimationFrame(windLoop);
   function buildParticles(){
     particlesEl.innerHTML="";
-    const count=Math.round(Math.max(window.innerWidth,360)/22);
+    const count=Math.round(Math.max(window.innerWidth,360)/34);
     for(let i=0;i<count;i++){
       const p=document.createElement('div'); p.className='ember';
       const size=rand(2,5), left=rand(2,98), dur=rand(7,15), delay=rand(0,10)+2.2, drift=rand(-40,40), gold=Math.random()>.5;
@@ -454,7 +509,7 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:clamp(38px,9
     }
   }
 
-  // ---------- realistic wandering bees (drift with the wind field) ----------
+  // ---------- realistic wandering bees ----------
   function makeBee(startTop){
     const wrap=document.getElementById('bees');
     const el=document.createElement('div'); el.className='bee';
@@ -480,35 +535,18 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:clamp(38px,9
     }
     requestAnimationFrame(frame);
   }
-  makeBee(0.34); makeBee(0.44);
+  makeBee(0.34);
 
-  const counts={tulip:8,lily:7,lotus:6,orchid:6,sun:7,white:6};
-  buildGarden(counts); buildParticles();
+  buildGarden(plantsData); buildParticles();
+  setInterval(applyDryness, 300000);
 
-  // ---------- persisted real-time plant growth ----------
-  const STORE_KEY='garden_saplings_v1', GROW_MS=6*60*60*1000;
-  function loadSaplings(){ try{return JSON.parse(localStorage.getItem(STORE_KEY))||[];}catch(e){return [];} }
-  function saveSaplings(list){ try{localStorage.setItem(STORE_KEY,JSON.stringify(list));}catch(e){} }
-  let saplings=loadSaplings();
-  let plantEls={};
-  function renderSaplings(){
-    plantEls={};
-    saplings.forEach(rec=>{
-      const frac=Math.min(1,(Date.now()-rec.plantedAt)/GROW_MS);
-      const g=makePlant(rec.type,rec.x,0,0.3+0.7*frac);
-      g.dataset.sid=rec.id; g.dataset.growing=frac<1?'1':'0';
-      g._growWrap.style.transition='transform 58s linear';
-      svg.appendChild(g); allPlants.push(g);
-      plantEls[rec.id]=g;
-    });
-  }
-  renderSaplings();
+  // periodically nudge growth scale for anything still maturing (2-day curve)
   setInterval(()=>{
     const now=Date.now();
-    saplings.forEach(rec=>{
+    plantsData.forEach(rec=>{
       const el=plantEls[rec.id]; if(!el) return;
       const frac=Math.min(1,(now-rec.plantedAt)/GROW_MS);
-      el._growWrap.setAttribute('transform',`scale(${(0.3+0.7*frac).toFixed(3)})`);
+      el._growWrap.setAttribute('transform',`scale(${(0.25+0.75*frac).toFixed(3)})`);
       el.dataset.growing = frac<1?'1':'0';
     });
   },60000);
@@ -529,8 +567,7 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:clamp(38px,9
       d.style.cssText=`position:absolute;top:-6%;left:${left}%;width:3px;height:14px;border-radius:2px;background:linear-gradient(180deg,rgba(180,220,255,.2),rgba(140,200,255,.85));animation:waterFall ${dur}s ease-in ${delay}s forwards;`;
       wrap.appendChild(d);
     }
-    document.getElementById('soil').classList.add('wet');
-    setTimeout(()=>document.getElementById('soil').classList.remove('wet'),90000);
+    setLastWatered(Date.now()); applyDryness();
     setTimeout(()=>{
       wrap.remove();
       svg.querySelectorAll('.bloom').forEach(b=>{
@@ -542,9 +579,9 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:clamp(38px,9
   }
 
   function plantSapling(type,x){
-    const rec={id:Date.now()+Math.random(), type, x, plantedAt:Date.now()};
-    saplings.push(rec); saveSaplings(saplings);
-    const g=makePlant(type,x,0,0.3);
+    const rec={id:'p'+Date.now()+Math.floor(rand(0,999)), type, x, plantedAt:Date.now()};
+    plantsData.push(rec); savePlants(plantsData);
+    const g=makePlant(type,x,0,0.25);
     g.dataset.sid=rec.id; g.dataset.growing='1';
     g._growWrap.style.transition='transform 58s linear';
     svg.appendChild(g); allPlants.push(g);
@@ -570,7 +607,7 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:clamp(38px,9
     p.style.transform=(p.getAttribute('transform')||'')+' scale(0.15)';
     p.style.opacity='0';
     const sid=p.dataset.sid;
-    if(sid){ saplings=saplings.filter(r=>String(r.id)!==sid); saveSaplings(saplings); delete plantEls[sid]; }
+    if(sid){ plantsData=plantsData.filter(r=>String(r.id)!==sid); savePlants(plantsData); delete plantEls[sid]; }
     allPlants=allPlants.filter(pl=>pl!==p);
     setTimeout(()=>p.remove(),650);
   }
@@ -652,7 +689,7 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:clamp(38px,9
 
   window.addEventListener('resize',()=>{
     clearTimeout(window.__rt);
-    window.__rt=setTimeout(()=>{ buildGarden(counts); renderSaplings(); buildParticles(); buildClouds(WX.cloudDensity); buildRainDrops(); },250);
+    window.__rt=setTimeout(()=>{ buildGarden(plantsData); buildParticles(); buildClouds(WX.cloudDensity); buildRainDrops(); },250);
   });
 })();
 </script>
