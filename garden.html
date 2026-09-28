@@ -101,7 +101,7 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:clamp(38px,9
   <div class="grain"></div>
   <div class="copy">
     <span class="eyebrow" id="greetLine">Good Morning</span>
-    <h1 id="nameText"></h1>
+    <h1 id="nameText">Sunshine</h1>
   </div>
   <div class="clock" id="clock">--:-- <span class="wx" id="wx"></span></div>
   <div class="popup" id="popup"></div>
@@ -152,15 +152,13 @@ h1{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:clamp(38px,9
   setInterval(gust, 9000+rand(0,4000));
 
   // ---------- greeting + nickname ----------
-  // NICKNAMES DISABLED FOR NOW — to bring them back, uncomment the line below
-  // and the "document.getElementById('nameText')..." line inside updateGreeting().
-  // const nicknames=["Beautifulll","Cookerrr","Juniorr !!","Jill !!","Dopamineee !!","Sunshineee","Madammm"];
+  const nicknames=["Beautifulll","Cookerrr","Juniorr !!","Jill !!","Dopamineee !!","Sunshineee","Madammm"];
   function dayOfYear(d){const s=new Date(d.getFullYear(),0,0);return Math.floor((d-s)/864e5);}
   function updateGreeting(){
     const h=new Date().getHours();
     const g = h<5?"Good Night":h<12?"Good Morning":h<17?"Good Afternoon":h<21?"Good Evening":"Good Night";
     document.getElementById('greetLine').textContent=g;
-    // document.getElementById('nameText').textContent=nicknames[dayOfYear(new Date())%nicknames.length];
+    document.getElementById('nameText').textContent=nicknames[dayOfYear(new Date())%nicknames.length];
   }
   updateGreeting();
 
