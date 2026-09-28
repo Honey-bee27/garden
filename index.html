@@ -6,113 +6,526 @@
 <title>Mini Surprise for Cooker !!</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&display=swap" rel="stylesheet">
+
 <style>
-:root{--paper:#faf6ef;--ink:#1f1f1f;--heart:#c0392b;--blush:#f0a0a5;
-  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box;}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--paper:#faf6ef;--ink:#1f1f1f;}}
-*{box-sizing:border-box;}
-html,body{height:100%;margin:0;}
-body{background:#e9e4da;display:flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;overflow:hidden;}
-.stage{position:relative;width:min(92vw,440px);aspect-ratio:4/5;background:var(--paper);border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,.18);}
-svg{width:100%;height:100%;display:block;}
-.stroke{fill:none;stroke:var(--ink);stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round;
-  stroke-dasharray:1;stroke-dashoffset:1;animation:drawIn .5s ease forwards;}
-.pop{opacity:0;transform:scale(0);transform-box:fill-box;transform-origin:center;animation:popIn .2s ease forwards;}
-@keyframes drawIn{to{stroke-dashoffset:0;}}
-@keyframes popIn{to{opacity:1;transform:scale(1);}}
-.beee{font-size:22px;fill:var(--ink);opacity:0;clip-path:inset(0 100% 0 0);
-  animation:reveal .4s steps(8) forwards, fadeIn .1s forwards;animation-delay:3.15s;}
-@keyframes reveal{to{clip-path:inset(0 0% 0 0);}}
-@keyframes fadeIn{to{opacity:1;}}
-.tossHeart{opacity:0;transform:scale(0) rotate(-8deg);transform-box:fill-box;transform-origin:center;
-  animation:tossPop .3s ease forwards;animation-delay:2.95s;}
-@keyframes tossPop{60%{opacity:1;transform:scale(1.15) rotate(6deg);}100%{opacity:1;transform:scale(1) rotate(0deg);}}
-.heartline{stroke:var(--heart);stroke-width:3.6;}
-.door{cursor:pointer;transform-box:fill-box;transform-origin:center;}
-.door:not(.ready){pointer-events:none;}
-.door.ready .doorShape{transition:transform .2s ease;}
-.door.ready:hover .doorShape{transform:scale(1.06);}
-.door.ready .doorGlow{animation:pulse 1.6s ease-in-out infinite;}
-@keyframes pulse{0%,100%{opacity:.12;}50%{opacity:.4;}}
-.door.press .doorShape{animation:press .16s ease;}
-@keyframes press{50%{transform:scale(.9);}}
-.opening .doorShape{animation:openDoor .5s ease forwards;}
-@keyframes openDoor{to{transform:scaleX(.1) skewY(10deg);opacity:.25;}}
-#flash{position:fixed;width:40px;height:40px;border-radius:50%;left:0;top:0;
-  background:radial-gradient(circle,#fff 0%,#ffe4c7 55%,rgba(255,228,199,0) 100%);
-  transform:translate(-50%,-50%) scale(0);opacity:0;pointer-events:none;
-  transition:transform 1.1s cubic-bezier(.2,.7,.3,1),opacity .6s ease;}
-#flash.grow{transform:translate(-50%,-50%) scale(70);opacity:1;}
-.hint{position:absolute;bottom:10px;width:100%;text-align:center;font-size:14px;color:#9a9a9a;
-  opacity:0;animation:popIn .5s ease forwards;animation-delay:4.1s;}
+:root{
+  --paper:#faf6ef;
+  --ink:#1f1f1f;
+  --heart:#c0392b;
+  --blush:#f0a0a5;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  box-sizing:border-box;
+}
+
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#faf6ef;
+    --ink:#1f1f1f;
+  }
+}
+
+*{
+  box-sizing:border-box;
+}
+
+html,body{
+  height:100%;
+  margin:0;
+}
+
+body{
+  background:#e9e4da;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-family:'Caveat',cursive;
+  overflow:hidden;
+}
+
+.stage{
+  position:relative;
+  width:min(92vw,440px);
+  aspect-ratio:4/5;
+  background:var(--paper);
+  border-radius:18px;
+  box-shadow:0 10px 30px rgba(0,0,0,.18);
+}
+
+svg{
+  width:100%;
+  height:100%;
+  display:block;
+}
+
+.stroke{
+  fill:none;
+  stroke:var(--ink);
+  stroke-width:3.2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  stroke-dasharray:1;
+  stroke-dashoffset:1;
+  animation:drawIn .5s ease forwards;
+}
+
+.pop{
+  opacity:0;
+  transform:scale(0);
+  transform-box:fill-box;
+  transform-origin:center;
+  animation:popIn .2s ease forwards;
+}
+
+@keyframes drawIn{
+  to{
+    stroke-dashoffset:0;
+  }
+}
+
+@keyframes popIn{
+  to{
+    opacity:1;
+    transform:scale(1);
+  }
+}
+
+.beee{
+  font-size:22px;
+  fill:var(--ink);
+  opacity:0;
+  clip-path:inset(0 100% 0 0);
+  animation:
+    reveal .4s steps(8) forwards,
+    fadeIn .1s forwards;
+  animation-delay:3.15s;
+}
+
+@keyframes reveal{
+  to{
+    clip-path:inset(0 0% 0 0);
+  }
+}
+
+@keyframes fadeIn{
+  to{
+    opacity:1;
+  }
+}
+
+.tossHeart{
+  opacity:0;
+  transform:scale(0) rotate(-8deg);
+  transform-box:fill-box;
+  transform-origin:center;
+  animation:tossPop .3s ease forwards;
+  animation-delay:2.95s;
+}
+
+@keyframes tossPop{
+  60%{
+    opacity:1;
+    transform:scale(1.15) rotate(6deg);
+  }
+
+  100%{
+    opacity:1;
+    transform:scale(1) rotate(0deg);
+  }
+}
+
+.heartline{
+  stroke:var(--heart);
+  stroke-width:3.6;
+}
+
+.door{
+  cursor:pointer;
+  transform-box:fill-box;
+  transform-origin:center;
+}
+
+.door:not(.ready){
+  pointer-events:none;
+}
+
+.door.ready .doorShape{
+  transition:transform .2s ease;
+}
+
+.door.ready:hover .doorShape{
+  transform:scale(1.06);
+}
+
+.door.ready .doorGlow{
+  animation:pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes pulse{
+  0%,100%{
+    opacity:.12;
+  }
+
+  50%{
+    opacity:.4;
+  }
+}
+
+.door.press .doorShape{
+  animation:press .16s ease;
+}
+
+@keyframes press{
+  50%{
+    transform:scale(.9);
+  }
+}
+
+.opening .doorShape{
+  animation:openDoor .5s ease forwards;
+}
+
+@keyframes openDoor{
+  to{
+    transform:scaleX(.1) skewY(10deg);
+    opacity:.25;
+  }
+}
+
+#flash{
+  position:fixed;
+  width:40px;
+  height:40px;
+  border-radius:50%;
+  left:0;
+  top:0;
+  background:
+    radial-gradient(
+      circle,
+      #fff 0%,
+      #ffe4c7 55%,
+      rgba(255,228,199,0) 100%
+    );
+  transform:translate(-50%,-50%) scale(0);
+  opacity:0;
+  pointer-events:none;
+  transition:
+    transform 1.1s cubic-bezier(.2,.7,.3,1),
+    opacity .6s ease;
+}
+
+#flash.grow{
+  transform:translate(-50%,-50%) scale(70);
+  opacity:1;
+}
+
+.hint{
+  position:absolute;
+  bottom:10px;
+  width:100%;
+  text-align:center;
+  font-size:14px;
+  color:#9a9a9a;
+  opacity:0;
+  animation:popIn .5s ease forwards;
+  animation-delay:4.1s;
+}
 </style>
 </head>
+
 <body>
+
 <div class="stage">
+
 <svg viewBox="0 0 400 500" id="stageSvg">
-<filter id="wobble" x="-20%" y="-20%" width="140%" height="140%">
-  <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="7" result="n"/>
-  <feDisplacementMap in="SourceGraphic" in2="n" scale="1.4"/>
+
+<filter
+  id="wobble"
+  x="-20%"
+  y="-20%"
+  width="140%"
+  height="140%">
+
+  <feTurbulence
+    type="fractalNoise"
+    baseFrequency="0.018"
+    numOctaves="2"
+    seed="7"
+    result="n"/>
+
+  <feDisplacementMap
+    in="SourceGraphic"
+    in2="n"
+    scale="1.4"/>
+
 </filter>
 
+
 <symbol id="tossHeartGlyph" viewBox="-12 -10 24 20">
-  <path d="M0,7 C-5,1 -12,0 -12,-4 C-12,-9 -6,-11 0,-5 C6,-11 12,-9 12,-4 C12,0 5,1 0,7 Z"/>
+
+  <path d="M0,7
+    C-5,1 -12,0 -12,-4
+    C-12,-9 -6,-11 0,-5
+    C6,-11 12,-9 12,-4
+    C12,0 5,1 0,7 Z"/>
+
 </symbol>
+
+
 <!-- big freehand marker heart outline -->
-<path class="stroke heartline" pathLength="1" filter="url(#wobble)" style="animation-delay:3.15s"
-  d="M255,215 C223,180 183,158 183,118 C183,88 213,70 243,88 C248,92 252,98 255,105 C258,98 262,92 267,88 C297,70 327,88 327,118 C327,158 287,180 255,215 Z"/>
+
+<path
+  class="stroke heartline"
+  pathLength="1"
+  filter="url(#wobble)"
+  style="animation-delay:3.15s"
+  d="M255,215
+  C223,180 183,158 183,118
+  C183,88 213,70 243,88
+  C248,92 252,98 255,105
+  C258,98 262,92 267,88
+  C297,70 327,88 327,118
+  C327,158 287,180 255,215 Z"/>
+
 
 <!-- door hidden at the heart's core -->
-<g class="door" id="doorGroup" role="button" aria-label="Open the door">
-  <rect class="doorGlow" x="236" y="130" width="38" height="50" rx="11" fill="var(--heart)" opacity="0"/>
+
+<g
+  class="door"
+  id="doorGroup"
+  role="button"
+  aria-label="Open the door">
+
+  <rect
+    class="doorGlow"
+    x="236"
+    y="130"
+    width="38"
+    height="50"
+    rx="11"
+    fill="var(--heart)"
+    opacity="0"/>
+
   <g class="doorShape">
-    <path class="stroke" pathLength="1" style="animation-delay:3.9s;stroke-width:2.8"
-      d="M241,174 L241,150 C241,136 269,136 269,150 L269,174 Z"/>
-    <circle class="pop" style="animation-delay:4.3s" cx="263" cy="161" r="2" fill="var(--ink)"/>
+
+    <path
+      class="stroke"
+      pathLength="1"
+      style="animation-delay:3.9s;stroke-width:2.8"
+      d="M241,174
+      L241,150
+      C241,136 269,136 269,150
+      L269,174 Z"/>
+
+    <circle
+      class="pop"
+      style="animation-delay:4.3s"
+      cx="263"
+      cy="161"
+      r="2"
+      fill="var(--ink)"/>
+
   </g>
+
 </g>
 
+
 <!-- doodle character, bottom-left -->
-<g filter="url(#wobble)" transform="translate(0,230)">
-  <path class="stroke" pathLength="1" style="animation-delay:0s"
-    d="M110,61 C85,61 66,81 66,105 C66,130 85,150 110,150 C135,150 154,130 154,105 C154,81 135,61 110,61 Z"/>
-  <path class="stroke" pathLength="1" style="animation-delay:.7s" d="M128,160 Q158,152 178,146"/>
-  <path class="stroke" pathLength="1" style="animation-delay:1.0s;stroke-width:2.8" d="M178,146 L189,139 L182,150 L193,144"/>
-  <path class="stroke" pathLength="1" style="animation-delay:1.3s"
-    d="M88,148 C80,158 76,172 76,188 L76,214 L67,221 L76,214 L76,197 Q104,207 132,197 L132,214 L143,221 L132,214 L132,188 C132,172 128,158 120,148"/>
-  <path class="stroke" pathLength="1" style="animation-delay:2.0s;stroke-width:2.8" d="M82,166 Q65,175 70,187 Q73,189 67,191"/>
-  <rect class="pop" style="animation-delay:2.3s" x="89" y="95" width="8" height="10" rx="2" fill="var(--ink)"/>
-  <rect class="pop" style="animation-delay:2.35s" x="122" y="95" width="8" height="10" rx="2" fill="var(--ink)"/>
-  <path class="stroke" pathLength="1" style="animation-delay:2.5s" d="M97,115 Q110,124 123,115"/>
-  <path class="stroke" pathLength="1" style="animation-delay:2.8s;stroke-width:2.4;stroke:var(--blush)" d="M78,109 L86,112 M79,114 L87,117"/>
-  <path class="stroke" pathLength="1" style="animation-delay:2.85s;stroke-width:2.4;stroke:var(--blush)" d="M134,112 L142,109 M133,117 L141,114"/>
+
+<g
+  filter="url(#wobble)"
+  transform="translate(0,230)">
+
+  <path
+    class="stroke"
+    pathLength="1"
+    style="animation-delay:0s"
+    d="M110,61
+    C85,61 66,81 66,105
+    C66,130 85,150 110,150
+    C135,150 154,130 154,105
+    C154,81 135,61 110,61 Z"/>
+
+  <path
+    class="stroke"
+    pathLength="1"
+    style="animation-delay:.7s"
+    d="M128,160 Q158,152 178,146"/>
+
+  <path
+    class="stroke"
+    pathLength="1"
+    style="animation-delay:1.0s;stroke-width:2.8"
+    d="M178,146
+    L189,139
+    L182,150
+    L193,144"/>
+
+  <path
+    class="stroke"
+    pathLength="1"
+    style="animation-delay:1.3s"
+    d="M88,148
+    C80,158 76,172 76,188
+    L76,214
+    L67,221
+    L76,214
+    L76,197
+    Q104,207 132,197
+    L132,214
+    L143,221
+    L132,214
+    L132,188
+    C132,172 128,158 120,148"/>
+
+  <path
+    class="stroke"
+    pathLength="1"
+    style="animation-delay:2.0s;stroke-width:2.8"
+    d="M82,166
+    Q65,175 70,187
+    Q73,189 67,191"/>
+
+  <rect
+    class="pop"
+    style="animation-delay:2.3s"
+    x="89"
+    y="95"
+    width="8"
+    height="10"
+    rx="2"
+    fill="var(--ink)"/>
+
+  <rect
+    class="pop"
+    style="animation-delay:2.35s"
+    x="122"
+    y="95"
+    width="8"
+    height="10"
+    rx="2"
+    fill="var(--ink)"/>
+
+  <path
+    class="stroke"
+    pathLength="1"
+    style="animation-delay:2.5s"
+    d="M97,115 Q110,124 123,115"/>
+
+  <path
+    class="stroke"
+    pathLength="1"
+    style="animation-delay:2.8s;stroke-width:2.4;stroke:var(--blush)"
+    d="M78,109 L86,112
+    M79,114 L87,117"/>
+
+  <path
+    class="stroke"
+    pathLength="1"
+    style="animation-delay:2.85s;stroke-width:2.4;stroke:var(--blush)"
+    d="M134,112 L142,109
+    M133,117 L141,114"/>
+
+
   <!-- the little heart Toodle tosses -->
-  <use href="#tossHeartGlyph" class="tossHeart" x="198" y="112" width="26" height="22" fill="var(--heart)"/>
-  <text class="beee" x="184" y="106" font-family="Caveat,cursive">Beeee !!</text>
+
+  <use
+    href="#tossHeartGlyph"
+    class="tossHeart"
+    x="198"
+    y="112"
+    width="26"
+    height="22"
+    fill="var(--heart)"/>
+
+  <text
+    class="beee"
+    x="184"
+    y="106"
+    font-family="Caveat,cursive">
+    Beeee !!
+  </text>
+
 </g>
+
 </svg>
-<div class="hint">Click the little door Cooker !!</div>
+
+<div class="hint">
+  Click the little door Cooker !!
 </div>
+
+</div>
+
 <div id="flash"></div>
+
+
 <script>
-const GARDEN_URL = "file:///C:/Projects/BEE/For%20Her/Garden.html";
+
+/*
+  Both files are in the same GitHub folder:
+
+  index.html
+  garden.html
+
+  So we use the relative path.
+*/
+
+const GARDEN_URL = "garden.html";
+
 const doorGroup = document.getElementById('doorGroup');
+
 let opened = false;
-setTimeout(()=> doorGroup.classList.add('ready'), 4600);
-doorGroup.addEventListener('click', ()=>{
-  if(opened || !doorGroup.classList.contains('ready')) return;
+
+setTimeout(() => {
+  doorGroup.classList.add('ready');
+}, 4600);
+
+
+doorGroup.addEventListener('click', () => {
+
+  if (
+    opened ||
+    !doorGroup.classList.contains('ready')
+  ) {
+    return;
+  }
+
   opened = true;
+
   doorGroup.classList.add('press');
-  setTimeout(()=>{
+
+
+  setTimeout(() => {
+
     doorGroup.classList.add('opening');
+
     const rect = doorGroup.getBoundingClientRect();
+
     const flash = document.getElementById('flash');
-    flash.style.left = (rect.left + rect.width/2) + 'px';
-    flash.style.top = (rect.top + rect.height/2) + 'px';
-    requestAnimationFrame(()=> flash.classList.add('grow'));
-    setTimeout(()=> window.location.href = GARDEN_URL, 1150);
+
+    flash.style.left =
+      (rect.left + rect.width / 2) + 'px';
+
+    flash.style.top =
+      (rect.top + rect.height / 2) + 'px';
+
+
+    requestAnimationFrame(() => {
+      flash.classList.add('grow');
+    });
+
+
+    setTimeout(() => {
+
+      window.location.href = GARDEN_URL;
+
+    }, 1150);
+
   }, 150);
+
 });
+
 </script>
+
 </body>
 </html>
